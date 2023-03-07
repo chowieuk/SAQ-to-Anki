@@ -8,9 +8,11 @@
 
 import pdftotext
 import sys, re
+from pathlib import Path
 
-pdfPath = "/mnt/c/Users/Admini_T470s/Documents/Personal/Open University/TM354/Block 1.pdf"
-# sys.argv[1]
+if len(sys.argv) != 2:
+    sys.exit("please supply one filename as an argument")
+pdfPath = Path(sys.argv[1])
 
 # helper function for finding multiple instances of a substring within a string
 # we will use it to find multiple SAQ entries on a single page
@@ -29,16 +31,12 @@ class Card:
         #self.unit = unit.replace(" ", "_") - omitted due to complexity
         self.SAQ = SAQ.replace(" ", "_")
         self.prefix = prefix
-        self.question = question#.replace("\n", " ")
-        self.answer = answer#.replace("\n", " ")
+        self.question = question.replace('"', '""')
+        self.answer = answer.replace('"', '""')
 
     def __str__(self):
     
-        if self.prefix != "":
-            return f""""SAQ {self.SAQ[4:]} {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}, {self.SAQ}, {self.SAQ+self.prefix}\n"""
-        else:
-            return f""""SAQ {self.SAQ[4:]} {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}, {self.SAQ}\n"""
-            
+        return f""""SAQ {self.SAQ[4:]} (Page {self.page}) {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}_{self.SAQ}\n"""
 
 # list of all subquestion prefixs
 prefixList = [
@@ -118,13 +116,14 @@ for matchNum, match in enumerate(answerMatches, start=1):
     answers.append(match.group(2))
     
 #TODO: some kind of exception here if these arrays don't have matching sizes
-print(len(SAQs))
-print(len(pageNos))
-print(len(questions))
-print(len(answers))
 
 if len(SAQs) != len(pageNos) != len(questions) != len(answers):
-    print("WARNIN - your constituent lists are not of equal size")
+    print("WARNING - your constituent lists are not of equal size")
+    print("This means there are probably some invalid cards. Sorry!")
+    print(f"SAQs:      {len(SAQs)}")
+    print(f"pageNos:   {len(pageNos)}")
+    print(f"questions: {len(questions)}")
+    print(f"answers:   {len(answers)}")
 
 # combine our four lists into one list of lists
 QandAs = list(zip(SAQs, pageNos, questions, answers))
@@ -163,7 +162,7 @@ for SAQ, pageNo, question, answer in QandAs:
             # if we have an empty subanswer, then something has gone wrong
             # TODO: put this behind an exception, or at least notify the user that their cards won't be perfect.
             if len(subanswer) == 0:
-                print(f"WARNING - {SAQ}{prefixsInBlock[index]}, {pageNo} has an empty answer")
+                print(f"WARNING - {SAQ}{prefixsInBlock[index]} (Page {pageNo}) has an empty answer")
             cards.append(card)
     
     # otherwise just create a card with the question and answer
@@ -178,9 +177,11 @@ for SAQ, pageNo, question, answer in QandAs:
         cards.append(card)
 
 # write list of cards to file:
-filename = pdfPath.split("/")[-1] + "-cards.txt"
+tagname = pdfPath.stem.replace(" ", "_")
+filename = pdfPath.stem + " cards.txt"
 
 with open(filename, "w") as f:
+    f.write(f"tags:{tagname}\n")
     for card in cards:
         f.writelines(str(card))
 
