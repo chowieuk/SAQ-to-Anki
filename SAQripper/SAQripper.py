@@ -173,8 +173,10 @@ for SAQ, pageNo, question, answer in QandAs:
         cards.append(card)
 
 # write list of cards to file:
-
 filename = pdfPath.split("/")[-1] + "-cards.txt"
 
 with open(filename, "w") as f:
-    f.writelines(cards)
+    for card in cards:
+        f.writelines(str(card))
+
+print(f"{len(cards)} cards written to {filename}")
