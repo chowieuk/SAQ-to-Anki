@@ -116,8 +116,8 @@ if debug:
         f.write(wholebook)
 
 # Two regexex that match to the Question block and Answer block respectively
-SAQregex = r"(SAQ\s\d{1,2})\n\n([\s\S]*?)((\n\n\d)|(?=Answer))"
-answerRegex = r"(Answer\n\n)([\s\S]*?)((?=SAQ)|(?=Exercise)|(?=\nIn Exercise)|(?=\n\n))"
+SAQregex = r"(SAQ\s\d{1,2})\n[\.\n]+([\s\S]*?)((\n\n\d)|(?=Answer))"
+answerRegex = r"(Answer\n[\.\n]+)([\s\S]*?)((?=SAQ)|(?=Exercise)|(?=\nIn Exercise)|(?=\n\n))"
 
 # Finding matches within the whole book
 SAQmatches = re.finditer(SAQregex, wholebook, re.MULTILINE)
