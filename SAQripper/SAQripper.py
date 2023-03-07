@@ -10,9 +10,13 @@ import pdftotext
 import sys, re
 from pathlib import Path
 
-if len(sys.argv) != 2:
-    sys.exit("please supply one filename as an argument")
+if len(sys.argv) < 2:
+    sys.exit("please supply a filename as an argument")
 pdfPath = Path(sys.argv[1])
+
+debug = False
+if sys.argv[2] == "debug":
+    debug = True
 
 # helper function for finding multiple instances of a substring within a string
 # we will use it to find multiple SAQ entries on a single page
@@ -68,8 +72,13 @@ for pageNo, page in enumerate(pdf):
    wholebook += page
    SAQonPage = list(find_all(page,"SAQ "))
    if len(SAQonPage) > 0:
-      #print(f"found {len(SAQonPage)} SAQ(s) on page {pageNo - 3}")
+      if debug:
+        print(f"found {len(SAQonPage)} SAQ(s) on page {pageNo - 3}")
       [pageNos.append(pageNo - 3) for SAQ in SAQonPage]
+
+if debug:
+    with open(f"{pdfPath.stem} raw.txt", "w") as f:
+        f.write(wholebook)
 
 # We're going clean up page boundaries using regexes that match to the surroundings of the end of page character \x0c
 
@@ -93,6 +102,10 @@ wholebook = re.sub(regex1, '', wholebook, 0, re.MULTILINE)
 # Next pass we are comfortable the match won't interfere with Q + A extract, and we substitue with a newline:
 regex2 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)\n"
 wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
+
+if debug:
+    with open(f"{pdfPath.stem} filtered.txt", "w") as f:
+        f.write(wholebook)
 
 # Two regexex that match to the Question block and Answer block respectively
 SAQregex = r"(SAQ\s\d{1,2})\n\n([\s\S]*?)((\n\n\d)|(?=Answer))"
@@ -157,7 +170,8 @@ for SAQ, pageNo, question, answer in QandAs:
                 subquestion[4:],
                 subanswer[4:],
             )
-            # DEBUG: print(f"{SAQ}{prefixsInBlock[index]}, {pageNo}\n{subquestion[4:]}\n=============\n{subanswer[4:]}\n")
+            if debug:
+                print(f"{SAQ}{prefixsInBlock[index]}, (Page {pageNo})\n{subquestion[4:]}\n=============\n{subanswer[4:]}\n")
 
             # if we have an empty subanswer, then something has gone wrong
             # TODO: put this behind an exception, or at least notify the user that their cards won't be perfect.
@@ -167,6 +181,8 @@ for SAQ, pageNo, question, answer in QandAs:
     
     # otherwise just create a card with the question and answer
     else:
+        if debug:
+            print(f"{SAQ}, (Page{pageNo})\n{question}\n=============\n{answer}\n")
         card = Card(
             pageNo,
             SAQ,
