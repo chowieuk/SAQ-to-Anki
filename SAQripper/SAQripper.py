@@ -33,7 +33,12 @@ class Card:
         self.answer = answer#.replace("\n", " ")
 
     def __str__(self):
-        return f""""SAQ {self.SAQ[4:]} {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}, {self.SAQ}, {self.prefix}"""
+    
+        if self.prefix != "":
+            return f""""SAQ {self.SAQ[4:]} {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}, {self.SAQ}, {self.SAQ+self.prefix}\n"""
+        else:
+            return f""""SAQ {self.SAQ[4:]} {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}, {self.SAQ}\n"""
+            
 
 # list of all subquestion prefixs
 prefixList = [
