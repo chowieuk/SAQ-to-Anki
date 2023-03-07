@@ -65,16 +65,24 @@ with open(pdfPath, "rb") as f:
 
 # Combine all pages into one string
 # Add entries to our pageNo list for each instance of "SAQ "
+# Note: had to make this far more resource intensive due to duplicate instances
+# of "\nSAQ $SAQ_no". New method uses set() to determine number of unique instances.
+# it's hacky, and there's probably a better way.
 
 wholebook = ""
 pageNos = []
-for pageNo, page in enumerate(pdf):   
-   wholebook += page
-   SAQonPage = list(find_all(page,"\nSAQ "))
-   if len(SAQonPage) > 0:
-      if debug:
-        print(f"found {len(SAQonPage)} SAQ(s) on page {pageNo - 3}")
-      [pageNos.append(pageNo - 3) for SAQ in SAQonPage]
+SAQregex = r"\nSAQ\s\d+"
+for pageNo, page in enumerate(pdf):
+
+    wholebook += page
+    matches = re.finditer(SAQregex, page, re.MULTILINE)
+    SAQmatches = [match.group() for match in matches]
+    if len(SAQmatches) == 0:
+        continue
+    unique_SAQs = set(SAQmatches)
+    [pageNos.append(pageNo - 3) for SAQ in unique_SAQs]
+    if debug:
+        print(f"found {len(unique_SAQs)} SAQ(s) on page {pageNo - 3} (total: {len(pageNos)})")
 
 if debug:
     with open(f"{pdfPath.stem} raw.txt", "w") as f:
