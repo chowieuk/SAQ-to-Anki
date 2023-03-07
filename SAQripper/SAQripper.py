@@ -70,7 +70,7 @@ wholebook = ""
 pageNos = []
 for pageNo, page in enumerate(pdf):   
    wholebook += page
-   SAQonPage = list(find_all(page,"SAQ "))
+   SAQonPage = list(find_all(page,"\nSAQ "))
    if len(SAQonPage) > 0:
       if debug:
         print(f"found {len(SAQonPage)} SAQ(s) on page {pageNo - 3}")
@@ -182,7 +182,7 @@ for SAQ, pageNo, question, answer in QandAs:
     # otherwise just create a card with the question and answer
     else:
         if debug:
-            print(f"{SAQ}, (Page{pageNo})\n{question}\n=============\n{answer}\n")
+            print(f"{SAQ}, (Page {pageNo})\n{question}\n=============\n{answer}\n")
         card = Card(
             pageNo,
             SAQ,
