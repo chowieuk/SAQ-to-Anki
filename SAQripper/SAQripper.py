@@ -117,6 +117,12 @@ wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
 regex3 = r"(SAQ \d{1,2}\n)(\w[\s\S]*?\n\n)"
 wholebook = re.sub(regex3, r"\1\n", wholebook, 0, re.MULTILINE)
 
+# This pass is necessary to replace "Table $no Answer to SAQ $no", which was interfering with cards.
+# right now answers in the form of a table are not supported, but this pass removes interfering table headings
+
+regex4 = r"Table \d{1,2} Answer to SAQ \d{1,2}\n"
+wholebook = re.sub(regex4, "", wholebook, 0, re.MULTILINE)
+
 if debug:
     with open(f"{pdfPath.stem} filtered.txt", "w") as f:
         f.write(wholebook)
