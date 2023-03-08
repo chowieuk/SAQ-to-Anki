@@ -1,3 +1,9 @@
+# any pdf files used for extraction
+*.pdf
+
+# any output files
+*.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
