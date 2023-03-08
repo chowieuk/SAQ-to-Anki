@@ -103,13 +103,19 @@ if debug:
 
 # I couldn't find a single regex that satisfied this edge case, so we went with two passes.
 
-# First use a regex which makes sure not to include "SAQ" in the match, and substitue with an empty string:
+# First use a regex which makes sure not to include "SAQ" in the match, and substitutes with an empty string:
 regex1 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)(?=SAQ)"
 wholebook = re.sub(regex1, '', wholebook, 0, re.MULTILINE)
 
-# Next pass we are comfortable the match won't interfere with Q + A extract, and we substitue with a newline:
+# Next pass we are comfortable the match won't interfere with Q + A extract, and we substitute with a newline:
 regex2 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)\n"
 wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
+
+# This pass is necessary to replace any notes in the margin that are incident on the same line as an SAQ header.
+# These interfere with question parsing in later passes. We substitute these interfering notes with a new line
+
+regex3 = r"(SAQ \d{1,2}\n)(\w[\s\S]*?\n\n)"
+wholebook = re.sub(regex3, r"\1\n", wholebook, 0, re.MULTILINE)
 
 if debug:
     with open(f"{pdfPath.stem} filtered.txt", "w") as f:
@@ -204,6 +210,11 @@ for SAQ, pageNo, question, answer in QandAs:
 tagname = pdfPath.stem.replace(" ", "_")
 filename = pdfPath.stem + " cards.txt"
 
+#TODO: add guards
+#TODO: add option to define filename
+#TODO: add SAQ number to debug
+#TODO: prompt for debug mode
+#TODO: some method of automatically highlighting missing SAQ in the series
 with open(filename, "w") as f:
     f.write(f"tags:{tagname}\n")
     for card in cards:
