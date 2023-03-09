@@ -54,7 +54,7 @@ Please take note of the quotes - if your path contains any spaces then you must 
 - **Choose the Deck you created earlier**
 - My other settings (which I believe are the default) looked like this:
 
-![Anki Settings](example Anki settings.png)
+![Anki Settings]("example Anki settings.png")
 
 You should receive a notice that looks something like this:
 
