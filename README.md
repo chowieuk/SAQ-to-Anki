@@ -44,18 +44,6 @@ So for example if I had a textbook named `Block 1.pdf` in the same directory as 
 And I would expect to see a file named `Block 1 cards.txt`
 Please take note of the quotes - if your path contains any spaces then you must wrap it in quotes.
 
-### Debug usage
-
-If you're noticing some issues you can supply the debug flag to get some more information
-
-```
-py SAQripper.py path/to/textbook.pdf debug
-```
-
-This will create two additional files: `textbook filtered.txt` and `textbook raw.txt` so you can compare the raw output of `pdftotext` with the output from the script after some initial filtering. These two files will help you compose better regexs should you want to improve the results of the script.
-
-Debug mode will also print a significant amount info to the terminal. I found it useful to pipe the debug output to `less` via `py SAQripper.py "Block 1.pdf" | less`
-
 ## Importing Anki cards
 
 - Open Anki
@@ -76,6 +64,18 @@ Importing complete.
 ```
 
 And that's it, you've got your Anki cards!
+
+## Debugging
+
+If you're noticing some issues you can supply the debug flag to get some more information
+
+```
+py SAQripper.py path/to/textbook.pdf debug
+```
+
+This will create two additional files: `textbook filtered.txt` and `textbook raw.txt` so you can compare the raw output of `pdftotext` with the output from the script after some initial filtering. These two files will help you compose better regexs should you want to improve the results of the script.
+
+Debug mode will also print a significant amount info to the terminal. I found it useful to pipe the debug output to `less` via `py SAQripper.py "Block 1.pdf" | less`
 
 # Known issues
 
