@@ -84,7 +84,9 @@ Debug mode will also print a significant amount info to the terminal. I found it
 
 # TODO
 
+- Refactor in preparation for writing tests
 - Write and include a test suite
+- Fix known issues
 - Add a flag to make tagging cards optional
 - Add tags to each card for which Unit the card belongs to
 - Remove tags per page number, as they are included in the card body and it creates too many tags
