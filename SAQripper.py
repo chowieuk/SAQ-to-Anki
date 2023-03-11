@@ -68,7 +68,7 @@ def remove_page_boundaries(wholebook: str) -> str:
     wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
 
     if debug:
-        with open(f"{pdfPath.stem} filtered.txt", "w") as f:
+        with open(f"{pdfPath.stem} combined.txt", "w") as f:
             f.write(wholebook)
     
     return wholebook
@@ -85,6 +85,10 @@ def remove_interfering_portions(wholebook: str) -> str:
 
     regex4 = r"Table \d{1,2} Answer to SAQ \d{1,2}\n"
     wholebook = re.sub(regex4, "", wholebook, 0, re.MULTILINE)
+
+    if debug:
+    with open(f"{pdfPath.stem} filtered.txt", "w") as f:
+        f.write(wholebook)
 
     return wholebook
 
