@@ -92,6 +92,44 @@ def remove_interfering_portions(wholebook: str) -> str:
 
     return wholebook
 
+def extract_SAQs(pageNos: List[int], wholebook: str) -> List[Tuple[int, str, str, str]]:
+
+    # Two regexex that match to the Question block and Answer block respectively
+    SAQregex = r"(SAQ\s\d{1,2})\n[\.\n]+([\s\S]*?)((\n\n\d)|(?=Answer))"
+    answerRegex = r"(Answer\n[\.\n]+)([\s\S]*?)((?=SAQ)|(?=Exercise)|(?=\nIn Exercise)|(?=\n\n))"
+
+    # Finding matches within the whole book
+    SAQmatches = re.finditer(SAQregex, wholebook, re.MULTILINE)
+    answerMatches = re.finditer(answerRegex, wholebook, re.MULTILINE)
+
+    # defining and populating our list of SAQs, questions & answers:
+
+    SAQs = []
+    questions = []
+    answers = []
+
+    for matchNum, match in enumerate(SAQmatches, start=1):
+        SAQs.append(match.group(1))
+        questions.append(match.group(2))    
+
+    for matchNum, match in enumerate(answerMatches, start=1):
+        answers.append(match.group(2))
+        
+    #TODO: some kind of exception here if these arrays don't have matching sizes
+
+    if len(SAQs) != len(pageNos) != len(questions) != len(answers):
+        print("WARNING - your constituent lists are not of equal size")
+        print("This means there are probably some invalid cards. Sorry!")
+        print(f"SAQs:      {len(SAQs)}")
+        print(f"pageNos:   {len(pageNos)}")
+        print(f"questions: {len(questions)}")
+        print(f"answers:   {len(answers)}")
+
+    # combine our four lists into one list of tuples
+    QandAs = list(zip(pageNos, SAQs, questions, answers))
+    return QandAs
+
+
 # helper class used to properly format anki cards
 class Card:
     def __init__(self, page, SAQ, prefix, question, answer):
@@ -113,41 +151,7 @@ with open(pdfPath, "rb") as f:
 wholebook, pageNos = combine_pages(pdf)
 wholebook = remove_page_boundaries(wholebook)
 wholebook = remove_interfering_portions(wholebook)
-
-
-# Two regexex that match to the Question block and Answer block respectively
-SAQregex = r"(SAQ\s\d{1,2})\n[\.\n]+([\s\S]*?)((\n\n\d)|(?=Answer))"
-answerRegex = r"(Answer\n[\.\n]+)([\s\S]*?)((?=SAQ)|(?=Exercise)|(?=\nIn Exercise)|(?=\n\n))"
-
-# Finding matches within the whole book
-SAQmatches = re.finditer(SAQregex, wholebook, re.MULTILINE)
-answerMatches = re.finditer(answerRegex, wholebook, re.MULTILINE)
-
-# defining and populating our list of SAQs, questions & answers:
-
-SAQs = []
-questions = []
-answers = []
-
-for matchNum, match in enumerate(SAQmatches, start=1):
-    SAQs.append(match.group(1))
-    questions.append(match.group(2))    
-
-for matchNum, match in enumerate(answerMatches, start=1):
-    answers.append(match.group(2))
-    
-#TODO: some kind of exception here if these arrays don't have matching sizes
-
-if len(SAQs) != len(pageNos) != len(questions) != len(answers):
-    print("WARNING - your constituent lists are not of equal size")
-    print("This means there are probably some invalid cards. Sorry!")
-    print(f"SAQs:      {len(SAQs)}")
-    print(f"pageNos:   {len(pageNos)}")
-    print(f"questions: {len(questions)}")
-    print(f"answers:   {len(answers)}")
-
-# combine our four lists into one list of lists
-QandAs = list(zip(SAQs, pageNos, questions, answers))
+QandAs = extract_SAQs(pageNos, wholebook)
 
 # list of all subquestion prefixs
 prefixList = [
@@ -168,7 +172,7 @@ prefixList = [
 
 # poulate a list of cards
 cards = []
-for SAQ, pageNo, question, answer in QandAs:
+for pageNo, SAQ, question, answer in QandAs:
     prefixsInBlock = [x for x in prefixList if x in question]
 
     # if the SAQ has subquestion prefixs, then create a card for each subquestion
