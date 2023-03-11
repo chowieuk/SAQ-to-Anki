@@ -84,7 +84,6 @@ Debug mode will also print a significant amount info to the terminal. I found it
 
 # TODO
 
-- Refactor in preparation for writing tests
 - Write and include a test suite
 - Fix known issues
 - Add a flag to make tagging cards optional
