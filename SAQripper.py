@@ -42,6 +42,52 @@ def combine_pages(pdf: pdftotext.PDF) -> Tuple[str, List[int]]:
             f.write(wholebook)
     return wholebook, pageNos
 
+# We're going clean up page boundaries using regexes that match to the surroundings of the end of page character \x0c
+
+# These end of page blocks have come in two forms:
+# `\n\n{$page_no}\n\n\x0c${unit_name}\n`
+# `\n\n{$page_no}\n\n\x0c{$section_no}\n\n{$section_name}`
+
+# We attempted to use a single regex (r"\n+\d+\n\n[\s\S]*?(\n(?=SAQ)|(?=\n\n))") to find both cases, however
+# the formatting is such that if an SAQ began immediately on a new page, it would have been included in the match
+# We are using instances of "SAQ" to extract the questions, so we need to leave these intact
+# Previous single pass attempt regex = r"\n+\d+\n\n[\s\S]*?(\n(?=SAQ)|(?=\n\n))"
+# Finding a series of match + substitutions that results in perfectly formatted Question + Answer blocks was very difficult
+# What I have is an incomplete solution
+
+def remove_page_boundaries(wholebook: str) -> str:
+
+    # I couldn't find a single regex that satisfied this edge case, so we went with two passes.
+
+    # First use a regex which makes sure not to include "SAQ" in the match, and substitutes with an empty string:
+    regex1 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)(?=SAQ)"
+    wholebook = re.sub(regex1, '', wholebook, 0, re.MULTILINE)
+
+    # Next pass we are comfortable the match won't interfere with Q + A extract, and we substitute with a newline:
+    regex2 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)\n"
+    wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
+
+    if debug:
+        with open(f"{pdfPath.stem} filtered.txt", "w") as f:
+            f.write(wholebook)
+    
+    return wholebook
+
+def remove_interfering_portions(wholebook: str) -> str:
+    # This pass is necessary to replace any notes in the margin that are incident on the same line as an SAQ header.
+    # These interfere with question parsing in later passes. We substitute these interfering notes with a new line
+
+    regex3 = r"(SAQ \d{1,2}\n)(\w[\s\S]*?\n\n)"
+    wholebook = re.sub(regex3, r"\1\n", wholebook, 0, re.MULTILINE)
+
+    # This pass is necessary to replace "Table $no Answer to SAQ $no", which was interfering with cards.
+    # right now answers in the form of a table are not supported, but this pass removes interfering table headings
+
+    regex4 = r"Table \d{1,2} Answer to SAQ \d{1,2}\n"
+    wholebook = re.sub(regex4, "", wholebook, 0, re.MULTILINE)
+
+    return wholebook
+
 # helper class used to properly format anki cards
 class Card:
     def __init__(self, page, SAQ, prefix, question, answer):
@@ -60,48 +106,10 @@ class Card:
 with open(pdfPath, "rb") as f:
     pdf = pdftotext.PDF(f)
 
-
-
-
 wholebook, pageNos = combine_pages(pdf)
-# We're going clean up page boundaries using regexes that match to the surroundings of the end of page character \x0c
+wholebook = remove_page_boundaries(wholebook)
+wholebook = remove_interfering_portions(wholebook)
 
-# These end of page blocks have come in two forms:
-# `\n\n{$page_no}\n\n\x0c${unit_name}\n`
-# `\n\n{$page_no}\n\n\x0c{$section_no}\n\n{$section_name}`
-
-# We attempted to use a single regex (r"\n+\d+\n\n[\s\S]*?(\n(?=SAQ)|(?=\n\n))") to find both cases, however
-# the formatting is such that if an SAQ began immediately on a new page, it would have been included in the match
-# We are using instances of "SAQ" to extract the questions, so we need to leave these intact
-# Previous single pass attempt regex = r"\n+\d+\n\n[\s\S]*?(\n(?=SAQ)|(?=\n\n))"
-# Finding a series of match + substitutions that results in perfectly formatted Question + Answer blocks was very difficult
-# What I have is an incomplete solution
-
-# I couldn't find a single regex that satisfied this edge case, so we went with two passes.
-
-# First use a regex which makes sure not to include "SAQ" in the match, and substitutes with an empty string:
-regex1 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)(?=SAQ)"
-wholebook = re.sub(regex1, '', wholebook, 0, re.MULTILINE)
-
-# Next pass we are comfortable the match won't interfere with Q + A extract, and we substitute with a newline:
-regex2 = r"$\n+\d{1,3}$\n^$\n(?=\x0c)\x0c(?:.*\n)\n"
-wholebook = re.sub(regex2, "\n", wholebook, 0, re.MULTILINE)
-
-# This pass is necessary to replace any notes in the margin that are incident on the same line as an SAQ header.
-# These interfere with question parsing in later passes. We substitute these interfering notes with a new line
-
-regex3 = r"(SAQ \d{1,2}\n)(\w[\s\S]*?\n\n)"
-wholebook = re.sub(regex3, r"\1\n", wholebook, 0, re.MULTILINE)
-
-# This pass is necessary to replace "Table $no Answer to SAQ $no", which was interfering with cards.
-# right now answers in the form of a table are not supported, but this pass removes interfering table headings
-
-regex4 = r"Table \d{1,2} Answer to SAQ \d{1,2}\n"
-wholebook = re.sub(regex4, "", wholebook, 0, re.MULTILINE)
-
-if debug:
-    with open(f"{pdfPath.stem} filtered.txt", "w") as f:
-        f.write(wholebook)
 
 # Two regexex that match to the Question block and Answer block respectively
 SAQregex = r"(SAQ\s\d{1,2})\n[\.\n]+([\s\S]*?)((\n\n\d)|(?=Answer))"
