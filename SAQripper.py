@@ -2,31 +2,45 @@
 
 # There will be multiple stages
 
-# Extract relevant text from the PDF
-# Parse text into Questions + Answers
-# Convert into Anki card format
-
 import pdftotext
 import sys, re
 from pathlib import Path
+from typing import List, Tuple
 
 if len(sys.argv) < 2:
-    sys.exit("please supply a filename as an argument")
-pdfPath = Path(sys.argv[1])
+    sys.exit(f"Usage: {sys.argv[1]} file.pdf -debug")
 
+pdfPath = Path(sys.argv[1])
 debug = False
-if sys.argv[2] == "debug":
+if sys.argv[2] == "-debug":
     debug = True
 
-# helper function for finding multiple instances of a substring within a string
-# we will use it to find multiple SAQ entries on a single page
-def find_all(a_str, sub):
-    start = 0
-    while True:
-        start = a_str.find(sub, start)
-        if start == -1: return
-        yield start
-        start += len(sub) # use start += 1 to find overlapping matches
+# Combine all pages into one string
+# Add entries to our pageNo list for each instance of "SAQ "
+# Note: had to make this far more resource intensive due to duplicate instances
+# of "\nSAQ $SAQ_no". New method uses set() to determine number of unique instances.
+# it's hacky, and there's probably a better way.
+
+def combine_pages(pdf: pdftotext.PDF) -> Tuple[str, List[int]]:
+    wholebook = ""
+    pageNos = []
+    SAQregex = r"\nSAQ\s\d+"
+    for pageNo, page in enumerate(pdf):
+
+        wholebook += page
+        matches = re.finditer(SAQregex, page, re.MULTILINE)
+        SAQmatches = [match.group() for match in matches]
+        if len(SAQmatches) == 0:
+            continue
+        unique_SAQs = set(SAQmatches)
+        [pageNos.append(pageNo - 3) for SAQ in unique_SAQs]
+        if debug:
+            print(f"found {len(unique_SAQs)} SAQ(s) on page {pageNo - 3} (total: {len(pageNos)})")
+
+    if debug:
+        with open(f"{pdfPath.stem} raw.txt", "w") as f:
+            f.write(wholebook)
+    return wholebook, pageNos
 
 # helper class used to properly format anki cards
 class Card:
@@ -42,52 +56,14 @@ class Card:
     
         return f""""SAQ {self.SAQ[4:]} (Page {self.page}) {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}_{self.SAQ}\n"""
 
-# list of all subquestion prefixs
-prefixList = [
-    "(a)",
-    "(b)",
-    "(c)",
-    "(d)",
-    "(e)",
-    "(f)",
-    "(g)",
-    "(h)",
-    "(i)",
-    "(j)",
-    "(k)",
-    "(l)",
-    "(m)"
-]    
-
 # Load your PDF
 with open(pdfPath, "rb") as f:
     pdf = pdftotext.PDF(f)
 
-# Combine all pages into one string
-# Add entries to our pageNo list for each instance of "SAQ "
-# Note: had to make this far more resource intensive due to duplicate instances
-# of "\nSAQ $SAQ_no". New method uses set() to determine number of unique instances.
-# it's hacky, and there's probably a better way.
 
-wholebook = ""
-pageNos = []
-SAQregex = r"\nSAQ\s\d+"
-for pageNo, page in enumerate(pdf):
 
-    wholebook += page
-    matches = re.finditer(SAQregex, page, re.MULTILINE)
-    SAQmatches = [match.group() for match in matches]
-    if len(SAQmatches) == 0:
-        continue
-    unique_SAQs = set(SAQmatches)
-    [pageNos.append(pageNo - 3) for SAQ in unique_SAQs]
-    if debug:
-        print(f"found {len(unique_SAQs)} SAQ(s) on page {pageNo - 3} (total: {len(pageNos)})")
 
-if debug:
-    with open(f"{pdfPath.stem} raw.txt", "w") as f:
-        f.write(wholebook)
-
+wholebook, pageNos = combine_pages(pdf)
 # We're going clean up page boundaries using regexes that match to the surroundings of the end of page character \x0c
 
 # These end of page blocks have come in two forms:
@@ -160,6 +136,23 @@ if len(SAQs) != len(pageNos) != len(questions) != len(answers):
 
 # combine our four lists into one list of lists
 QandAs = list(zip(SAQs, pageNos, questions, answers))
+
+# list of all subquestion prefixs
+prefixList = [
+    "(a)",
+    "(b)",
+    "(c)",
+    "(d)",
+    "(e)",
+    "(f)",
+    "(g)",
+    "(h)",
+    "(i)",
+    "(j)",
+    "(k)",
+    "(l)",
+    "(m)"
+]    
 
 # poulate a list of cards
 cards = []
