@@ -104,9 +104,9 @@ def extract_SAQs(pageNos: List[int], wholebook: str) -> List[Tuple[int, str, str
 
     # defining and populating our list of SAQs, questions & answers:
 
-    SAQs = []
-    questions = []
-    answers = []
+    SAQs: List[str] = []
+    questions: List[str] = []
+    answers: List[str] = []
 
     for matchNum, match in enumerate(SAQmatches, start=1):
         SAQs.append(match.group(1))
@@ -129,30 +129,6 @@ def extract_SAQs(pageNos: List[int], wholebook: str) -> List[Tuple[int, str, str
     QandAs = list(zip(pageNos, SAQs, questions, answers))
     return QandAs
 
-
-# helper class used to properly format anki cards
-class Card:
-    def __init__(self, page, SAQ, prefix, question, answer):
-        self.page = page
-        #self.unit = unit.replace(" ", "_") - omitted due to complexity
-        self.SAQ = SAQ.replace(" ", "_")
-        self.prefix = prefix
-        self.question = question.replace('"', '""')
-        self.answer = answer.replace('"', '""')
-
-    def __str__(self):
-    
-        return f""""SAQ {self.SAQ[4:]} (Page {self.page}) {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}_{self.SAQ}\n"""
-
-# Load your PDF
-with open(pdfPath, "rb") as f:
-    pdf = pdftotext.PDF(f)
-
-wholebook, pageNos = combine_pages(pdf)
-wholebook = remove_page_boundaries(wholebook)
-wholebook = remove_interfering_portions(wholebook)
-QandAs = extract_SAQs(pageNos, wholebook)
-
 # list of all subquestion prefixs
 prefixList = [
     "(a)",
@@ -170,56 +146,85 @@ prefixList = [
     "(m)"
 ]    
 
-# poulate a list of cards
-cards = []
-for pageNo, SAQ, question, answer in QandAs:
-    prefixsInBlock = [x for x in prefixList if x in question]
+# helper class used to properly format anki cards
+class Card:
+    def __init__(self, page, SAQ, prefix, question, answer):
+        self.page = page
+        #self.unit = unit.replace(" ", "_") - omitted due to complexity
+        self.SAQ = SAQ.replace(" ", "_")
+        self.prefix = prefix
+        self.question = question.replace('"', '""')
+        self.answer = answer.replace('"', '""')
 
-    # if the SAQ has subquestion prefixs, then create a card for each subquestion
-    # TODO: put this behind a flag
-    if len(prefixsInBlock) > 1:
-        for index in range(len(prefixsInBlock)):
+    def __str__(self):
+    
+        return f""""SAQ {self.SAQ[4:]} (Page {self.page}) {self.prefix}\n{self.question}";"{self.answer}";Page_{self.page}_{self.SAQ}\n"""
 
-            qStart = question.find(prefixsInBlock[index])
-            aStart = answer.find(prefixsInBlock[index])
-            
-            if index == (len(prefixsInBlock) - 1):
-                qEnd = len(question)
-                aEnd = len(answer)
-            else:
-                qEnd = question.find(prefixsInBlock[index + 1])
-                aEnd = answer.find(prefixsInBlock[index + 1])
-            
-            subquestion = question[qStart:qEnd - 1]
-            subanswer = answer[aStart:aEnd - 1]
+# populate a list of cards
+# note: also performs subquestion extraction as necessary
+def populate_cards(QandAs: List[Tuple[int, str, str, str]]) -> List[Card]:
+
+    cards: List[Card] = []
+    for pageNo, SAQ, question, answer in QandAs:
+        prefixsInBlock = [x for x in prefixList if x in question]
+
+        # if the SAQ has subquestion prefixs, then create a card for each subquestion
+        # TODO: put this behind a flag
+        if len(prefixsInBlock) > 1:
+            for index in range(len(prefixsInBlock)):
+
+                qStart = question.find(prefixsInBlock[index])
+                aStart = answer.find(prefixsInBlock[index])
+                
+                if index == (len(prefixsInBlock) - 1):
+                    qEnd = len(question)
+                    aEnd = len(answer)
+                else:
+                    qEnd = question.find(prefixsInBlock[index + 1])
+                    aEnd = answer.find(prefixsInBlock[index + 1])
+                
+                subquestion = question[qStart:qEnd - 1]
+                subanswer = answer[aStart:aEnd - 1]
+                card = Card(
+                    pageNo,
+                    SAQ,
+                    prefixsInBlock[index],
+                    subquestion[4:],
+                    subanswer[4:],
+                )
+                if debug:
+                    print(f"{SAQ}{prefixsInBlock[index]}, (Page {pageNo})\n{subquestion[4:]}\n=============\n{subanswer[4:]}\n")
+
+                # if we have an empty subanswer, then something has gone wrong
+                # TODO: put this behind an exception, or at least notify the user that their cards won't be perfect.
+                if len(subanswer) == 0:
+                    print(f"WARNING - {SAQ}{prefixsInBlock[index]} (Page {pageNo}) has an empty answer")
+                cards.append(card)
+        
+        # otherwise just create a card with the question and answer
+        else:
+            if debug:
+                print(f"{SAQ}, (Page {pageNo})\n{question}\n=============\n{answer}\n")
             card = Card(
                 pageNo,
                 SAQ,
-                prefixsInBlock[index],
-                subquestion[4:],
-                subanswer[4:],
+                "",
+                question,
+                answer
             )
-            if debug:
-                print(f"{SAQ}{prefixsInBlock[index]}, (Page {pageNo})\n{subquestion[4:]}\n=============\n{subanswer[4:]}\n")
-
-            # if we have an empty subanswer, then something has gone wrong
-            # TODO: put this behind an exception, or at least notify the user that their cards won't be perfect.
-            if len(subanswer) == 0:
-                print(f"WARNING - {SAQ}{prefixsInBlock[index]} (Page {pageNo}) has an empty answer")
             cards.append(card)
-    
-    # otherwise just create a card with the question and answer
-    else:
-        if debug:
-            print(f"{SAQ}, (Page {pageNo})\n{question}\n=============\n{answer}\n")
-        card = Card(
-            pageNo,
-            SAQ,
-            "",
-            question,
-            answer
-        )
-        cards.append(card)
+
+    return cards
+
+# Load your PDF
+with open(pdfPath, "rb") as f:
+    pdf = pdftotext.PDF(f)
+
+wholebook, pageNos = combine_pages(pdf)
+wholebook = remove_page_boundaries(wholebook)
+wholebook = remove_interfering_portions(wholebook)
+QandAs = extract_SAQs(pageNos, wholebook)
+cards = populate_cards(QandAs)
 
 # write list of cards to file:
 tagname = pdfPath.stem.replace(" ", "_")
