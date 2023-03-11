@@ -87,8 +87,8 @@ def remove_interfering_portions(wholebook: str) -> str:
     wholebook = re.sub(regex4, "", wholebook, 0, re.MULTILINE)
 
     if debug:
-    with open(f"{pdfPath.stem} filtered.txt", "w") as f:
-        f.write(wholebook)
+        with open(f"{pdfPath.stem} filtered.txt", "w") as f:
+            f.write(wholebook)
 
     return wholebook
 
