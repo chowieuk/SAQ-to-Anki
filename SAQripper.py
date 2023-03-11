@@ -216,6 +216,23 @@ def populate_cards(QandAs: List[Tuple[int, str, str, str]]) -> List[Card]:
 
     return cards
 
+# write list of cards to file:
+def write_cards_to_file(cards: List[Card]):
+    tagname = pdfPath.stem.replace(" ", "_")
+    filename = pdfPath.stem + " cards.txt"
+
+    #TODO: add guards
+    #TODO: add option to define filename
+    #TODO: add SAQ number to debug
+    #TODO: prompt for debug mode
+    #TODO: some method of automatically highlighting missing SAQ in the series
+    with open(filename, "w") as f:
+        f.write(f"tags:{tagname}\n")
+        for card in cards:
+            f.writelines(str(card))
+
+    print(f"{len(cards)} cards written to {filename}")
+
 # Load your PDF
 with open(pdfPath, "rb") as f:
     pdf = pdftotext.PDF(f)
@@ -225,19 +242,4 @@ wholebook = remove_page_boundaries(wholebook)
 wholebook = remove_interfering_portions(wholebook)
 QandAs = extract_SAQs(pageNos, wholebook)
 cards = populate_cards(QandAs)
-
-# write list of cards to file:
-tagname = pdfPath.stem.replace(" ", "_")
-filename = pdfPath.stem + " cards.txt"
-
-#TODO: add guards
-#TODO: add option to define filename
-#TODO: add SAQ number to debug
-#TODO: prompt for debug mode
-#TODO: some method of automatically highlighting missing SAQ in the series
-with open(filename, "w") as f:
-    f.write(f"tags:{tagname}\n")
-    for card in cards:
-        f.writelines(str(card))
-
-print(f"{len(cards)} cards written to {filename}")
+write_cards_to_file(cards)
